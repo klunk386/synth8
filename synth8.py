@@ -18,7 +18,7 @@ from scipy.signal import butter, lfilter
 from pynput import keyboard
 
 SAMPLE_RATE = 44100
-BLOCK_SIZE = 512
+BLOCK_SIZE = 1024
 
 
 class TerminalSilent:
@@ -145,19 +145,23 @@ class SynthVoice:
         self.lfo_phase = 0
 
     def _generate_lfo(self, frames):
-        t = (np.arange(frames) + self.lfo_phase) / SAMPLE_RATE
-        self.lfo_phase += frames
+        t = np.arange(frames)
+        phase_inc = 2 * np.pi * self.lfo_freq / SAMPLE_RATE
+        phase_array = self.lfo_phase + t * phase_inc
 
         if self.lfo_waveform == 'sine':
-            mod = np.sin(2 * np.pi * self.lfo_freq * t)
+           mod = np.sin(phase_array)
         elif self.lfo_waveform == 'square':
-            mod = np.sign(np.sin(2 * np.pi * self.lfo_freq * t))
+            mod = np.sign(np.sin(phase_array))
         elif self.lfo_waveform == 'saw':
-            mod = 2 * (t * self.lfo_freq - np.floor(0.5 + t * self.lfo_freq))
+            mod = 2 * ((phase_array / (2 * np.pi)) % 1) - 1
         elif self.lfo_waveform == 'triangle':
-            mod = 2 * np.abs(2 * (t * self.lfo_freq % 1) - 1) - 1
+           mod = 2 * np.abs(2 * ((phase_array / (2 * np.pi)) % 1) - 1) - 1
         else:
-            mod = np.zeros(frames)
+           mod = np.zeros(frames)
+
+        # Keep phase in 0–2pi range to prevent overflow
+        self.lfo_phase = (self.lfo_phase + frames * phase_inc) % (2 * np.pi)
 
         return mod.astype(np.float32)
 
@@ -396,7 +400,8 @@ class SynthEngine:
             samplerate=SAMPLE_RATE,
             blocksize=BLOCK_SIZE,
             channels=1,
-            callback=self._callback
+            callback=self._callback,
+            latency='high'
         )
         self.stream.start()
 
