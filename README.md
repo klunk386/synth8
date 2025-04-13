@@ -53,7 +53,6 @@ engine.add_voice(voice2, id='B', key='x')
 
 engine.play()
 
-
 with TerminalSilent() as ts:
     print("Press 'z' or 'x' to play (CTRL+C per exit).")
     try:
