@@ -2,9 +2,9 @@
 
 A modular synthesizer engine for real-time audio synthesis in Python.
 
-This system supports multiple voices with independent waveform generators,
-ADSR envelopes, low-pass filters, and LFO modulation. Voices can be triggered
-via keyboard keys using `pynput`.
+This system supports multiple voices (polyphony) with independent waveform
+generators (oscillators), ADSR envelopes, low-pass filters, and LFO modulation.
+Voices can be triggered as API call or keyboard via keys (using `pynput`).
 
 ---
 
@@ -14,7 +14,7 @@ via keyboard keys using `pynput`.
 - Basic waveforms: sine, square, saw
 - ADSR amplitude envelope (attack, decay, sustain, release)
 - LFO modulation (vibrato/frequency modulation)
-- Per-key voice triggering using the keyboard
+- Per-key voice triggering using keyboard binding
 - Cross-platform terminal handling (Unix and Windows)
 
 ---
