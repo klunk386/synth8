@@ -246,6 +246,67 @@ class SynthVoice:
             self.env_phase = 'release'
 
 
+class Mixer:
+    """
+    A container that mixes multiple SynthVoice instances into one voice-like
+    object. It can be used in SynthEngine just like a single voice.
+
+    This is useful for playing chords, layering different oscillators,
+    or combining multiple timbres into a single triggerable unit.
+    """
+
+    def __init__(self, voices):
+        """
+        Initializes the mixer with a list of voices.
+
+        Parameters:
+            voices (list of SynthVoice): Voices to mix together.
+        """
+        self.voices = voices
+
+    @property
+    def active(self):
+        """
+        Returns True if at least one internal voice is currently active.
+        Used by SynthEngine to determine voice activity.
+        """
+        return any(v.active for v in self.voices)
+
+    def render(self, frames):
+        """
+        Renders audio by summing all voices and averaging them.
+
+        Parameters:
+            frames (int): Number of samples to generate.
+
+        Returns:
+            np.ndarray: Mixed audio block as 1D float32 array.
+        """
+        mix = np.zeros(frames, dtype=np.float32)
+        active = 0
+        for voice in self.voices:
+            if voice.active or voice.env_phase != 'off':
+                mix += voice.render(frames)
+                active += 1
+        if active > 0:
+            mix /= active
+        return mix
+
+    def trigger_on(self):
+        """
+        Triggers all voices in the mixer (attack phase).
+        """
+        for voice in self.voices:
+            voice.trigger_on()
+
+    def trigger_off(self):
+        """
+        Triggers the release phase for all voices in the mixer.
+        """
+        for voice in self.voices:
+            voice.trigger_off()
+
+
 class SynthEngine:
     """
     SynthEngine manages multiple SynthVoice instances and maps them

@@ -1,10 +1,23 @@
+"""
+Keyboard Example – Real-Time Synth Trigger via QWERTY Layout
+
+This example maps keyboard keys to musical notes (from C4 to E5) and assigns
+a SynthVoice to each key. Voices share the same waveform, and optional
+ADSR, filter, and LFO settings can be toggled via boolean flags.
+
+Keys:
+    z s x d c v g b h n j m , . /  → maps to C4 to E5
+
+Press keys to trigger notes. Release to stop. Ctrl+C to quit.
+"""
+
 import time
 from synth8 import SynthEngine, SynthVoice, TerminalSilent
 
 # === GLOBAL SYNTH PARAMETERS ===
 USE_FILTER = True
-USE_ADSR = False
-USE_LFO = False
+USE_ADSR = True
+USE_LFO = True
 
 WAVEFORM = 'sine'
 
@@ -15,8 +28,8 @@ RELEASE = 0.4
 
 CUTOFF = 500
 
-LFO_FREQ = 1.0
-LFO_DEPTH = 1.0
+LFO_FREQ = 5.0
+LFO_DEPTH = 2.0
 LFO_WAVEFORM = 'sine'
 
 # === NOTE FREQUENCIES (equal temperament, C4 = 261.63 Hz) ===
