@@ -104,7 +104,7 @@ try:
 except KeyboardInterrupt:
     engine.stop()
     print("Goodbye.")
-    ```
+```
 ---
 
 ## License
