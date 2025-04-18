@@ -1,4 +1,4 @@
-# Python Synth8
+# Synth8
 
 A modular synthesizer engine for real-time audio synthesis in Python.
 
