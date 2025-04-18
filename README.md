@@ -61,6 +61,7 @@ with TerminalSilent() as ts:
     except KeyboardInterrupt:
         engine.stop()
         print("Bye!")
+```
 ---
 
 ## License
