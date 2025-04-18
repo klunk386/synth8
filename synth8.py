@@ -14,48 +14,15 @@ import sys
 import os
 import numpy as np
 import sounddevice as sd
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, sosfilt, sosfilt_zi
 from pynput import keyboard
 
 SAMPLE_RATE = 44100
 BLOCK_SIZE = 1024
 
 
-class TerminalSilent:
-    """
-    Context manager to disable terminal input echo across platforms.
-
-    On Unix systems (Linux/macOS), this sets the terminal to non-canonical
-    mode to avoid echoing characters typed during runtime. On Windows, echo
-    is not disabled but no blocking occurs. This is mainly useful for
-    keyboard-controlled synthesizer interaction via terminal.
-    """
-    def __enter__(self):
-        """
-        Enters the silent terminal context. On Unix, applies raw mode
-        to stdin. On Windows, imports msvcrt but performs no changes.
-        """
-        self.platform = sys.platform
-        if self.platform.startswith('linux') or self.platform == 'darwin':
-            import termios
-            import tty
-            self.fd = sys.stdin.fileno()
-            self.old_settings = termios.tcgetattr(self.fd)
-            tty.setcbreak(self.fd)
-            self.termios = termios
-        elif self.platform == 'win32':
-            import msvcrt
-            self.msvcrt = msvcrt
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Exits the silent terminal context, restoring original terminal
-        settings (Unix only).
-        """
-        if self.platform.startswith('linux') or self.platform == 'darwin':
-            self.termios.tcsetattr(self.fd, self.termios.TCSADRAIN,
-                                   self.old_settings)
+# Optional: set default output device (e.g. USB DAC)
+# sd.default.device = 18
 
 
 class SynthVoice:
@@ -81,16 +48,19 @@ class SynthVoice:
         self.lfo_waveform = 'sine'
         self.lfo_phase = 0
 
-        self.adsr_params = {
-            'attack': 0.01,
-            'decay': 0.1,
-            'sustain': 0.7,
-            'release': 0.3
-        }
+        # ADSR (individual attributes)
+        self.attack = 0.01
+        self.decay = 0.1
+        self.sustain = 0.7
+        self.release = 0.3
 
         self.env_phase = 'off'
         self.env_level = 0.0
         self.active = False
+
+        #self.filter_state = None
+        #self.filter_sos = None
+
 
     def oscillator(self, freq=440, waveform='sine'):
         """
@@ -111,6 +81,13 @@ class SynthVoice:
             cutoff (float): Filter cutoff in Hz.
         """
         self.cutoff = cutoff
+        self.filter_sos = butter(
+            N=2,
+            Wn=self.cutoff / (0.5 * SAMPLE_RATE),
+            btype='low',
+            output='sos'
+        )
+        self.filter_state = sosfilt_zi(self.filter_sos)
 
     def adsr(self, attack=0.01, decay=0.1, sustain=0.7, release=0.3):
         """
@@ -122,12 +99,10 @@ class SynthVoice:
             sustain (float): Amplitude level during sustain (0 to 1).
             release (float): Time to fade out after key release (seconds).
         """
-        self.adsr_params = {
-            'attack': attack,
-            'decay': decay,
-            'sustain': sustain,
-            'release': release
-        }
+        self.attack = attack
+        self.decay = decay
+        self.sustain = sustain
+        self.release = release
 
     def lfo(self, freq=5.0, depth=5.0, waveform='sine'):
         """
@@ -166,61 +141,71 @@ class SynthVoice:
         return mod.astype(np.float32)
 
     def _generate_waveform(self, frames):
-        base_freq = self.freq
+        t = np.arange(frames)
+        phase_inc = 2 * np.pi * self.freq / SAMPLE_RATE
+        carrier_phase = self.phase + phase_inc * t
+
         if self.lfo_enabled:
-            mod_signal = self._generate_lfo(frames)
-            freq_mod = base_freq + self.lfo_depth * mod_signal
+            lfo_signal = self._generate_lfo(frames)
+            mod_phase = carrier_phase + self.lfo_depth * lfo_signal
         else:
-            freq_mod = np.full(frames, base_freq)
+            mod_phase = carrier_phase
 
-        t = (np.arange(frames) + self.phase) / SAMPLE_RATE
-        self.phase += frames
+        self.phase = (carrier_phase[-1] + phase_inc) % (2 * np.pi)
 
-        wave = np.sin(2 * np.pi * freq_mod * t)
-        if self.waveform == 'saw':
-            wave = 2 * (t * freq_mod - np.floor(0.5 + t * freq_mod))
+        if self.waveform == 'sine':
+            wave = np.sin(mod_phase)
+        elif self.waveform == 'saw':
+            wave = 2 * ((mod_phase / (2 * np.pi)) % 1) - 1
         elif self.waveform == 'square':
-            wave = np.sign(np.sin(2 * np.pi * freq_mod * t))
+            wave = np.sign(np.sin(mod_phase))
+        else:
+            wave = np.zeros(frames)
 
         return wave.astype(np.float32)
 
     def _apply_filter(self, signal):
-        if self.cutoff:
-            b, a = butter(2, self.cutoff / (0.5 * SAMPLE_RATE), btype='low')
-            return lfilter(b, a, signal).astype(np.float32)
+        if self.cutoff and self.filter_sos is not None:
+            filtered, self.filter_state = sosfilt(
+                self.filter_sos, signal,
+                zi=self.filter_state
+            )
+            return filtered.astype(np.float32)
         return signal
 
     def _generate_envelope(self, frames):
         out = np.zeros(frames, dtype=np.float32)
         for i in range(frames):
             if self.env_phase == 'attack':
-                self.env_level += (1.0 /
-                    (self.adsr_params['attack'] * SAMPLE_RATE))
+                self.env_level += 1.0 / (self.attack * SAMPLE_RATE)
                 if self.env_level >= 1.0:
                     self.env_level = 1.0
                     self.env_phase = 'decay'
+
             elif self.env_phase == 'decay':
                 self.env_level -= (
-                    (1.0 - self.adsr_params['sustain']) /
-                    (self.adsr_params['decay'] * SAMPLE_RATE)
+                    (1.0 - self.sustain) / (self.decay * SAMPLE_RATE)
                 )
-                if self.env_level <= self.adsr_params['sustain']:
-                    self.env_level = self.adsr_params['sustain']
+                if self.env_level <= self.sustain:
+                    self.env_level = self.sustain
                     self.env_phase = 'sustain'
+
             elif self.env_phase == 'sustain':
-                self.env_level = self.adsr_params['sustain']
+                self.env_level = self.sustain
+
             elif self.env_phase == 'release':
-                self.env_level -= (
-                    self.adsr_params['sustain'] /
-                    (self.adsr_params['release'] * SAMPLE_RATE)
-                )
-                if self.env_level <= 0:
-                    self.env_level = 0
+                self.env_level -= self.env_level / (self.release * SAMPLE_RATE)
+                if self.env_level <= 0.0:
+                    self.env_level = 0.0
                     self.env_phase = 'off'
                     self.active = False
+
             elif self.env_phase == 'off':
-                self.env_level = 0
+                self.env_level = 0.0
+
+            self.env_level = max(0.0, min(self.env_level, 1.0))
             out[i] = self.env_level
+
         return out
 
     def render(self, frames):
@@ -401,7 +386,7 @@ class SynthEngine:
             blocksize=BLOCK_SIZE,
             channels=1,
             callback=self._callback,
-            latency='high'
+            latency='low'
         )
         self.stream.start()
 
@@ -416,4 +401,41 @@ class SynthEngine:
         if self.listener:
             self.listener.stop()
             self.listener = None
+
+
+class TerminalSilent:
+    """
+    Context manager to disable terminal input echo across platforms.
+
+    On Unix systems (Linux/macOS), this sets the terminal to non-canonical
+    mode to avoid echoing characters typed during runtime. On Windows, echo
+    is not disabled but no blocking occurs. This is mainly useful for
+    keyboard-controlled synthesizer interaction via terminal.
+    """
+    def __enter__(self):
+        """
+        Enters the silent terminal context. On Unix, applies raw mode
+        to stdin. On Windows, imports msvcrt but performs no changes.
+        """
+        self.platform = sys.platform
+        if self.platform.startswith('linux') or self.platform == 'darwin':
+            import termios
+            import tty
+            self.fd = sys.stdin.fileno()
+            self.old_settings = termios.tcgetattr(self.fd)
+            tty.setcbreak(self.fd)
+            self.termios = termios
+        elif self.platform == 'win32':
+            import msvcrt
+            self.msvcrt = msvcrt
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Exits the silent terminal context, restoring original terminal
+        settings (Unix only).
+        """
+        if self.platform.startswith('linux') or self.platform == 'darwin':
+            self.termios.tcsetattr(self.fd, self.termios.TCSADRAIN,
+                                   self.old_settings)
 

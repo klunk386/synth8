@@ -2,20 +2,21 @@ import time
 from synth8 import SynthEngine, SynthVoice, TerminalSilent
 
 # === GLOBAL SYNTH PARAMETERS ===
-USE_ADSR = True
 USE_FILTER = True
+USE_ADSR = False
 USE_LFO = False
+
+WAVEFORM = 'sine'
 
 ATTACK = 0.05
 DECAY = 0.1
 SUSTAIN = 0.6
 RELEASE = 0.4
 
-WAVEFORM = 'saw'
-CUTOFF = 1200
+CUTOFF = 500
 
-LFO_FREQ = 5.0
-LFO_DEPTH = 3.0
+LFO_FREQ = 1.0
+LFO_DEPTH = 1.0
 LFO_WAVEFORM = 'sine'
 
 # === NOTE FREQUENCIES (equal temperament, C4 = 261.63 Hz) ===
@@ -32,7 +33,9 @@ NOTE_FREQS = {
     'n': 440.00,  # A4
     'j': 466.16,  # A#4
     'm': 493.88,  # B4
-    ',': 523.25   # C5
+    ',': 523.25,  # C5
+    '.': 587.33,  # D5
+    '/': 659.26   # E4
 }
 
 # === SETUP ENGINE AND VOICES ===
@@ -56,13 +59,13 @@ for key, freq in NOTE_FREQS.items():
 
 engine.play()
 
-print("Play the keyboard! Keys: Z-M + S,D,G,H,J + ',' for C5.")
+print("Play the keyboard! (Z-M)")
 print("Press CTRL+C to stop.")
 
 try:
     with TerminalSilent():
         while True:
-            time.sleep(0.1)
+            time.sleep(0.01)
 except KeyboardInterrupt:
     engine.stop()
     print("Stopped.")

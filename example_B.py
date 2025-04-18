@@ -19,12 +19,11 @@ engine.add_voice(voice2, id='B', key='x')
 
 engine.play()
 
-
 with TerminalSilent() as ts:
     print("Premi 'Z' o 'X' per suonare le voci... (CTRL+C per uscire)")
     try:
         while True:
-            time.sleep(0.1)
+            time.sleep(0.01)
     except KeyboardInterrupt:
         engine.stop()
         print("Bye!")
