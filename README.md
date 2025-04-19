@@ -1,3 +1,5 @@
+![synth8 logo](assets/logo.png)
+
 # Synth8
 
 A modular synthesizer engine for real-time audio synthesis in Python.
