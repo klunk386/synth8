@@ -1,6 +1,6 @@
 <!-- ![synth8 logo](assets/logo.png) -->
 <p align="center">
-  <img src="assets/logo.png" alt="synth8 logo" width="300"/>
+  <img src="assets/logo_small.png" alt="synth8 logo" width="300"/>
 </p>
 
 # Synth8
