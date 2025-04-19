@@ -2,9 +2,6 @@
 <p align="center">
   <img src="assets/logo_small.png" alt="synth8 logo" width="300"/>
 </p>
-
-# Synth8
-
 A modular synthesizer engine for real-time audio synthesis in Python.
 
 Synth8 lets you build and control polyphonic synthesizers in Python with
