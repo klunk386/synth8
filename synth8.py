@@ -33,10 +33,12 @@ class SynthVoice:
     filtering, an ADSR envelope, and an LFO for frequency modulation.
     """
 
-    def __init__(self):
+    def __init__(self, gain=1.0):
         """
         Initializes default oscillator, ADSR, and LFO parameters.
         """
+        self.gain = gain
+
         self.freq = 440
         self.waveform = 'sine'
         self.cutoff = None
@@ -61,6 +63,14 @@ class SynthVoice:
         #self.filter_state = None
         #self.filter_sos = None
 
+    def set_gain(self, value):
+        """
+        Sets the output gain (amplitude multiplier) for the voice.
+    
+        Parameters:
+            value (float): Gain factor (e.g. 0.5 for half volume).
+        """
+        self.gain = float(value)
 
     def oscillator(self, freq=440, waveform='sine'):
         """
@@ -223,7 +233,7 @@ class SynthVoice:
 
         wave = self._generate_waveform(frames)
         env = self._generate_envelope(frames)
-        shaped = wave * env
+        shaped = wave * env * self.gain
         return self._apply_filter(shaped)
 
     def trigger_on(self):
@@ -255,7 +265,7 @@ class Mixer:
     or combining multiple timbres into a single triggerable unit.
     """
 
-    def __init__(self, voices):
+    def __init__(self, voices, gain=1.0):
         """
         Initializes the mixer with a list of voices.
 
@@ -263,6 +273,7 @@ class Mixer:
             voices (list of SynthVoice): Voices to mix together.
         """
         self.voices = voices
+        self.gain = gain
 
     @property
     def active(self):
@@ -289,7 +300,7 @@ class Mixer:
                 mix += voice.render(frames)
                 active += 1
         if active > 0:
-            mix /= active
+            mix = (mix / active) * self.gain
         return mix
 
     def trigger_on(self):
