@@ -124,9 +124,7 @@ engine.add_voice(mixer, id="layered_sound", key="z")
 
 ## Usage Examples
 
-### 1. Minimal voice with a sine wave
-
-This example creates a simple sine wave oscillator and assigns it to key 'z'.
+### 1. Minimal voice with sine oscillator
 
 ```python
 from synth8 import SynthEngine, SynthVoice, SynthOscillator
@@ -140,9 +138,7 @@ engine.add_voice(voice, id='note_a', key='z')
 engine.play(wait=True)
 ```
 
-### 2. Add filter and amplifier
-
-Here we process the oscillator output through a low-pass filter and a VCA (gain controller).
+### 2. Add filter and amplifier (VCA)
 
 ```python
 from synth8.nodes import SynthFilter, SynthVCA
@@ -155,9 +151,7 @@ voice = SynthVoice()
 voice.connect([osc, filt, vca])
 ```
 
-### 3. Apply ADSR envelope and LFO
-
-This adds dynamic control: the envelope modulates gain, and an LFO modulates pitch.
+### 3. Add ADSR envelope and LFO
 
 ```python
 from synth8.modulators import SynthADSR, SynthLFO
@@ -177,70 +171,21 @@ voice.add_modulator([adsr, lfo])
 engine.add_voice(voice, id="note_c", key="z")
 ```
 
-When the 'z' key is pressed, the voice is activated; on release, it enters the release phase.
-
-### 5. Mixer-based chord (multiple voices)
-
-```python
-from synth8.voice import Mixer
-
-# Create three independent voices (e.g. C, E, G)
-voice1 = SynthVoice()
-voice2 = SynthVoice()
-voice3 = SynthVoice()
-
-# Connect oscillators, filters, etc. as usual...
-
-mixer = Mixer(gain=1.0)
-mixer.add_voice(voice1)
-mixer.add_voice(voice2)
-mixer.add_voice(voice3)
-
-engine.add_voice(mixer, id="c_major", key="z")
-```
-
 ---
 
 ## Full Demos
 
-### Keyboard Piano
+| File                          | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| `keyboard_piano.py`          | QWERTY piano (Z to ,) with separate voices, each using ADSR + LFO          |
+| `example_simple.py`          | Single voice with oscillator → filter → VCA, modulated by ADSR + LFO       |
+| `minimal_mixer_chord.py`     | Chord (C–E–G) using a Mixer with 3 independent voices                      |
+| `lfo_only_tremolo.py`        | A sine oscillator modulated by an LFO on gain (tremolo effect)             |
 
-Maps QWERTY keys Z to , to notes C4–C5 using independent voices with filters and ADSR.
-
-Run:
-
-```bash
-python examples/keyboard_piano.py
-```
-
-### Static Chord
-
-Creates a chord using multiple oscillators within a single SynthVoice.
-
-Run:
+Each demo can be run directly with:
 
 ```bash
-python examples/example_chord.py
-```
-
-### Mixer-based Chord
-
-Demonstrates use of the `Mixer` to play a C major chord (C4, E4, G4) using three voices.
-
-Run:
-
-```bash
-python examples/minimal_mixer_chord.py
-```
-
-### LFO Tremolo
-
-A single oscillator with amplitude modulation using an LFO (tremolo effect).
-
-Run:
-
-```bash
-python examples/lfo_only_tremolo.py
+python examples/<filename>.py
 ```
 
 ---
