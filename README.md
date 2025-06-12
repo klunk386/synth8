@@ -80,51 +80,9 @@ A **SynthVoice** is a self-contained audio processing chain — typically corres
 - One or more **modulators**: components that modify parameters over time (e.g., envelopes, LFOs)
 - A logical gate state: whether the voice is currently active, controlled by key press/release
 
-Each voice is triggered by a keyboard key or programmatically, and deactivates automatically when its modulation and signal have finished.
+Each voice can be mapped to a keyboard key, or triggered programmatically. When the key is released, the voice enters a release phase and is automatically deactivated.
 
-### Nodes vs Modulators
-
-**Nodes** are the building blocks of the audio signal path. Each node takes an input signal (or none), processes it, and returns an output. Common node types include:
-
-- `SynthOscillator`: generates waveforms (sine, square, saw)
-- `SynthFilter`: applies low-pass filtering to a signal
-- `SynthVCA`: controls signal amplitude via gain
-
-**Modulators**, on the other hand, produce control signals that dynamically influence node parameters over time. Typical modulators are:
-
-- `SynthADSR`: attack–decay–sustain–release envelope
-- `SynthLFO`: low-frequency oscillator for vibrato, tremolo, etc.
-
-Modulators are connected to node parameters using:
-
-```python
-modulator.modulate(target_node, "parameter_name")
-```
-
-### Mixer: Combining Multiple Voices
-
-`synth8` also includes a `Mixer` class, which allows combining multiple voices into a single logical voice. This is useful when you want to trigger an entire chord or layered sound with a single key.
-
-A `Mixer` behaves like a `SynthVoice`, but internally renders and mixes several voices. Inactive voices are automatically removed after their release phase ends.
-
-Example:
-
-```python
-from synth8.voice import Mixer
-
-mixer = Mixer(gain=1.0)
-mixer.add_voice(voice1)
-mixer.add_voice(voice2)
-mixer.add_voice(voice3)
-
-engine.add_voice(mixer, id="layered_sound", key="z")
-```
-
----
-
-## Usage Examples
-
-### 1. Minimal voice with sine oscillator
+**Minimal example** — a sine oscillator controlled via the 'z' key:
 
 ```python
 from synth8 import SynthEngine, SynthVoice, SynthOscillator
@@ -138,7 +96,17 @@ engine.add_voice(voice, id='note_a', key='z')
 engine.play(wait=True)
 ```
 
-### 2. Add filter and amplifier (VCA)
+---
+
+### Nodes: Oscillator → Filter → VCA
+
+**Nodes** are audio processors arranged in sequence. The most common nodes are:
+
+- `SynthOscillator`: waveform generator (`sine`, `square`, `saw`)
+- `SynthFilter`: second-order low-pass filter
+- `SynthVCA`: voltage-controlled amplifier for amplitude control
+
+**Example: adding filter and amplifier**
 
 ```python
 from synth8.nodes import SynthFilter, SynthVCA
@@ -151,7 +119,22 @@ voice = SynthVoice()
 voice.connect([osc, filt, vca])
 ```
 
-### 3. Add ADSR envelope and LFO
+---
+
+### Modulators: ADSR and LFO
+
+**Modulators** are control sources that affect node parameters over time. They include:
+
+- `SynthADSR`: envelope with attack, decay, sustain, release
+- `SynthLFO`: low-frequency oscillator for vibrato, tremolo, etc.
+
+Modulators are connected to a node’s parameter using:
+
+```python
+modulator.modulate(target_node, "parameter_name")
+```
+
+**Example: envelope on gain and LFO on frequency**
 
 ```python
 from synth8.modulators import SynthADSR, SynthLFO
@@ -165,10 +148,45 @@ lfo.modulate(osc, "freq")
 voice.add_modulator([adsr, lfo])
 ```
 
-### 4. Assign to keyboard
+---
+
+### Keyboard Triggering
+
+`synth8` maps voices to keys using the `add_voice()` method:
 
 ```python
 engine.add_voice(voice, id="note_c", key="z")
+```
+
+- On press: `voice.trigger_on()` is called
+- On release: `voice.trigger_off()` triggers the release phase
+- Multiple voices can be assigned to different keys (e.g. piano layout)
+
+---
+
+### Mixer: Combining Multiple Voices
+
+A `Mixer` combines several `SynthVoice` instances and acts like a single voice. It is useful to play chords or layered instruments with a single key.
+
+**Example: chord with three voices (C, E, G)**
+
+```python
+from synth8.voice import Mixer
+
+# Define three independent voices
+voice1 = SynthVoice()
+voice2 = SynthVoice()
+voice3 = SynthVoice()
+
+# Connect oscillators, filters, VCAs, modulators to each voice...
+
+# Combine into one logical voice
+mixer = Mixer(gain=1.0)
+mixer.add_voice(voice1)
+mixer.add_voice(voice2)
+mixer.add_voice(voice3)
+
+engine.add_voice(mixer, id="c_major", key="z")
 ```
 
 ---
@@ -182,7 +200,7 @@ engine.add_voice(voice, id="note_c", key="z")
 | `minimal_mixer_chord.py`     | Chord (C–E–G) using a Mixer with 3 independent voices                      |
 | `lfo_only_tremolo.py`        | A sine oscillator modulated by an LFO on gain (tremolo effect)             |
 
-Each demo can be run directly with:
+All examples are located in the `examples/` directory and can be run directly with:
 
 ```bash
 python examples/<filename>.py
@@ -199,7 +217,7 @@ python examples/<filename>.py
 - Integrate with GUI controls or network protocols (e.g. OSC)
 - Add MIDI support via the upcoming `klavio` library
 
-The modular structure is lightweight and encourages experimentation with real-time synthesis logic.
+The codebase is clean and lightweight, making it easy to prototype new behaviors or integrate into a larger system.
 
 ---
 
