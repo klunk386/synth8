@@ -1,6 +1,6 @@
 # synth8
 
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPLv3-blue)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)]()
 [![Repository](https://img.shields.io/badge/github-synth8-black?logo=github)](https://github.com/yourname/synth8)
