@@ -1,6 +1,6 @@
 # synth8
 
-[![License: AGPL v3](https://img.shields.io/badge/license-GPLv3-blue)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPLv3-blue)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)]()
 [![Repository](https://img.shields.io/badge/github-synth8-black?logo=github)](https://github.com/yourname/synth8)
@@ -25,6 +25,7 @@ The architecture is simple, extensible, and designed with future integration (e.
 - ADSR envelopes and LFOs for time-based and cyclical modulation
 - Fully programmatic voice creation and connection
 - Dynamic voice activation and automatic cleanup
+- Mixer class to combine layered voices or chords
 - Easily extensible for new signal types or control inputs
 
 ---
@@ -100,11 +101,32 @@ Modulators are connected to node parameters using:
 modulator.modulate(target_node, "parameter_name")
 ```
 
+### Mixer: Combining Multiple Voices
+
+`synth8` also includes a `Mixer` class, which allows combining multiple voices into a single logical voice. This is useful when you want to trigger an entire chord or layered sound with a single key.
+
+A `Mixer` behaves like a `SynthVoice`, but internally renders and mixes several voices. Inactive voices are automatically removed after their release phase ends.
+
+Example:
+
+```python
+from synth8.voice import Mixer
+
+mixer = Mixer(gain=1.0)
+mixer.add_voice(voice1)
+mixer.add_voice(voice2)
+mixer.add_voice(voice3)
+
+engine.add_voice(mixer, id="layered_sound", key="z")
+```
+
 ---
 
 ## Usage Examples
 
 ### 1. Minimal voice with a sine wave
+
+This example creates a simple sine wave oscillator and assigns it to key 'z'.
 
 ```python
 from synth8 import SynthEngine, SynthVoice, SynthOscillator
@@ -120,6 +142,8 @@ engine.play(wait=True)
 
 ### 2. Add filter and amplifier
 
+Here we process the oscillator output through a low-pass filter and a VCA (gain controller).
+
 ```python
 from synth8.nodes import SynthFilter, SynthVCA
 
@@ -132,6 +156,8 @@ voice.connect([osc, filt, vca])
 ```
 
 ### 3. Apply ADSR envelope and LFO
+
+This adds dynamic control: the envelope modulates gain, and an LFO modulates pitch.
 
 ```python
 from synth8.modulators import SynthADSR, SynthLFO
@@ -151,7 +177,27 @@ voice.add_modulator([adsr, lfo])
 engine.add_voice(voice, id="note_c", key="z")
 ```
 
-Now pressing the Z key will trigger the voice, and releasing it will stop it gracefully.
+When the 'z' key is pressed, the voice is activated; on release, it enters the release phase.
+
+### 5. Mixer-based chord (multiple voices)
+
+```python
+from synth8.voice import Mixer
+
+# Create three independent voices (e.g. C, E, G)
+voice1 = SynthVoice()
+voice2 = SynthVoice()
+voice3 = SynthVoice()
+
+# Connect oscillators, filters, etc. as usual...
+
+mixer = Mixer(gain=1.0)
+mixer.add_voice(voice1)
+mixer.add_voice(voice2)
+mixer.add_voice(voice3)
+
+engine.add_voice(mixer, id="c_major", key="z")
+```
 
 ---
 
@@ -159,7 +205,7 @@ Now pressing the Z key will trigger the voice, and releasing it will stop it gra
 
 ### Keyboard Piano
 
-Maps QWERTY keys Z to , to notes C4–C5 using independent voices with filter and envelope.
+Maps QWERTY keys Z to , to notes C4–C5 using independent voices with filters and ADSR.
 
 Run:
 
@@ -169,12 +215,32 @@ python examples/keyboard_piano.py
 
 ### Static Chord
 
-Creates a chord using multiple oscillators triggered by a single key.
+Creates a chord using multiple oscillators within a single SynthVoice.
 
 Run:
 
 ```bash
 python examples/example_chord.py
+```
+
+### Mixer-based Chord
+
+Demonstrates use of the `Mixer` to play a C major chord (C4, E4, G4) using three voices.
+
+Run:
+
+```bash
+python examples/minimal_mixer_chord.py
+```
+
+### LFO Tremolo
+
+A single oscillator with amplitude modulation using an LFO (tremolo effect).
+
+Run:
+
+```bash
+python examples/lfo_only_tremolo.py
 ```
 
 ---
